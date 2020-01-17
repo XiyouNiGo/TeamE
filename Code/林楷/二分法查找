@@ -1,6 +1,6 @@
 int erfen_search(char *arr[],int num)
 {
-	int left=0,right=strlen(arr);
+	int left=0,right=strlen(arr)-1;
 	while(left<=right)
 	{
 		int t=(left+right)/2;
