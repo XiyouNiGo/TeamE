@@ -1,0 +1,14 @@
+int erfen_search(char *arr[],int num)
+{
+	int left=0,right=strlen(arr)-1;
+	while(left<=right)
+	{
+		int t=(left+right)/2;
+		if(num==arr[t])
+			return t;
+		else if(num>arr[t])
+			left=t+1;
+		else
+			right=t-1;
+	}
+}
