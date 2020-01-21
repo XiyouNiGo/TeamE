@@ -1,0 +1,12 @@
+#include<stdio.h>
+int main()
+{
+	int beishu;
+	printf("请输入杯数：");
+	scanf("%d",&beishu);
+	printf("%d杯相当于%.1f品脱\n",beishu/2);
+	printf("%d杯相当于%d盎司\n",beishu*8);
+	printf("%d杯相当于%d汤勺\n",beishu*8*2);
+	printf("%d杯相当于%d茶勺\n",beishu*8*23);
+	return 0;
+}

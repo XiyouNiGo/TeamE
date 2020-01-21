@@ -1,0 +1,9 @@
+#include<stdio.h>
+int main()
+{
+	int inch;
+	printf("请输入身高(/英寸):");
+	scanf("%d",&inch);
+	printf("你的身高为：%f厘米\n",2.54*inch);
+	return 0;
+}
