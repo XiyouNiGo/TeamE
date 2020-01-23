@@ -66,7 +66,7 @@ int delete_i(linkedlist *node,int i)
 		p1=p2;
 		p2=p2->next;
 	}
-	if(i!=0)
+	if(i!=-1)
 	{
 		printf("删除失败!\n");
 		return 0;
@@ -80,9 +80,9 @@ int delete_i(linkedlist *node,int i)
 int delete_key(linkedlist *node,int key)
 {
 	linkedlist *p1=node,*p2=node->next;
-	while(p1->next!=NULL)
+	while(p2->next!=NULL)
 	{
-		if(p2->data==data)
+		if(p2->data==key)
 		{
 			p1->next=p2->next;
 			printf("删除成功!\n");
@@ -97,7 +97,7 @@ int change(linkedlist *node,int i)
 {
 	linkedlist *p=node;
 	while(i--&&p->next!=NULL);
-	if(i==0)
+	if(i==-1)
 	{
 		printf("请输入修改后的值:\n");
 		scanf("%d",&p->data);
@@ -108,5 +108,43 @@ int change(linkedlist *node,int i)
 	{
 		printf("修改失败!\n");
 		return 0;
+	}
+}
+//查找第i个节点
+int search_i(linkedlist *node,int i)
+{
+	linkedlist *p=node;
+	while(i--&&p!=NULL)
+	{
+		p=p->next;
+	}
+	if(i==-1)
+	{
+		printf("该节点的值为%d\n",p->data);
+		return 1;
+	}
+	else
+	{
+		printf("查找失败!");
+		return 0;
+	}
+}
+//查找值为key的节点
+int search_key(linkedlist *node,int key)
+{
+	linkedlist *p=node;
+	int count=0;
+	p=p->next;
+	while(p!=NULL)
+	{
+		if(p->data==key)
+		{
+			printf("含key节点为第%d个节点\n",count);
+		    return count;
+		}
+		p=p->next;
+	}
+	printf("查找失败!");
+	return 0;
 	}
 }
