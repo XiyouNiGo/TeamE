@@ -2,7 +2,7 @@
     > File Name: 登录系统.c
     > Author: NiGo
     > Mail: nigo@xiyoulinux.org
-    > Created Time: 2020年02月21日 星期五 20时02分33秒
+    > Created Time: 2020年02月20日 星期四 17时48分41秒
  ************************************************************************/
 
 #include<stdio.h>
@@ -16,6 +16,7 @@ long get_tele();
 char get_first();
 char getch();
 char * s_gets(char * st, int n);
+void secret_pwd(char * pwd);
 //具体功能实现函数
 void create_user_file();
 void register_user();
@@ -98,7 +99,7 @@ char get_choice(void)
 		putchar('*');
 	putchar('\n');
 	putchar('\n');
-	//用字符串来输出是一个比较好用的技巧，来保证对齐
+//用字符串来输出是一个比较好用的技巧，来保证对齐
     printf("%-20s%-20s\n%-20s%-20s\n\n", "a. 注册账号", "b. 登录账号", "c. 找回密码", "q. 退出登录");	
 	for (int i =0; i < 40;i++)
 		putchar('*');
@@ -158,18 +159,18 @@ void register_user()
 		}
 	}
 	puts("请输入您的密码：");
-	s_gets(new_.pwd, SIZE);
+	secret_pwd(new_.pwd);
 	puts("请再次输入您的密码：");
-	s_gets(temp, SIZE);
+	secret_pwd(temp);
 	while (1)
 	{
 		if (!strcmp(new_.pwd, temp))
 			break;
 		puts("两次密码不一致！");
 		puts("请重新输入您的密码：");
-		s_gets(new_.pwd, SIZE);
+		secret_pwd(new_.pwd);
 		puts("请再次输入您的密码：");
-		s_gets(temp, SIZE);
+		secret_pwd(temp);
 	}
 	puts("请输入您的电话号码以便找回密码：");
 	new_.tele = get_tele();
@@ -227,7 +228,7 @@ int login()
 		if (!strcmp(temp, old.id))
 		{
 			puts("请输入您的密码：");
-			s_gets(temp, SIZE);
+			secret_pwd(temp);
 			if (!strcmp(temp, old.pwd))
 			{
 				printf("账户%s登录成功\n", old.pwd);
@@ -316,11 +317,42 @@ char * s_gets(char * st, int n)
 //自定义的getch()函数
 char getch()
 {
-	char c;
+	char ch;
+
     system("stty -echo");
     system("stty -icanon");
-    c=getchar();
+    ch = getchar();
     system("stty icanon");
     system("stty echo");
-    return c;
+
+    return ch;
+}
+
+void secret_pwd(char * pwd)
+{
+	char ch;
+	int i = 0;
+
+	while ((ch = getch()) != '\n')
+	{
+		if (ch == '\x7F')
+		{
+			putchar('\b');
+			putchar(' ');
+			putchar('\b');
+			if (i)
+				i--;
+			else
+				putchar('\a');
+		}
+		else
+		{
+			putchar('*');
+			pwd[i++] = ch;
+		}
+	}
+	pwd[i] = '\0';
+	putchar('\n');
+
+	return;
 }
