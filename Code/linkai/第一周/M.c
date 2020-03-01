@@ -8,9 +8,9 @@
 #include<stdio.h>
 int main()
 {
-	int n;
-	scanf("%d",&n);
+	long long  n;
+	scanf("%lld",&n);
 	if(n==0) printf("0\n");
-	else if((n+1)%2==0) printf("%d\n",(n+1)/2);
-	else printf("%d\n",n+1);
+	else if((n+1)%2==0) printf("%lld\n",(n+1)/2);
+	else printf("%lld\n",n+1);
 }
