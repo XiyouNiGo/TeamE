@@ -11,12 +11,17 @@
 #include <pwd.h>
 #include <errno.h>
 #include "debug.h"
-
+#include <signal.h>
+//参数
 #define PARAM_NONE   0                 //无参数
 #define PARAM_A      1                 //-a  显示所有文件
 #define PARAM_L      2                 //-l  显示一个文件的详细信息
 #define PARAM_R		 4				   //-R  递归
-#define MAXROWLEN    80     //一行显示的最多字符数
+#define PARAM_r		 8				   //将排序结果反向输出
+#define PARAM_n      16				   //列出 UID 与 GID 而非使用者与群组的名称
+#define PARAM_h      32                //将文件大小以人类较易读的方式列出来
+#define PARAM_i      64				   //列出inode号码
+#define MAXROWLEN    80				   //一行显示的最多字符数
 //颜色
 #define WHITE		 0
 #define BLUE		 1
@@ -24,19 +29,36 @@
 #define RED          3
 #define LBLUE        4
 #define YELLOW       5
+//容量单位
+#define KB           1024
+#define MB           1024*1024
+#define GB           1024*1024*1024
+#define TB           1024*1024*1024*1024
+//正误
+#define YES          1
+#define NO           0
 
+void display_dir_R(int, const char*);
 void display_single(const char*, int);
 void display_attribute(struct stat, const char*);
 void display(int, const char*);
 void display_dir(int, const char*);
 void print_name(const char*, int);
 int get_color(struct stat);
+void print_volume(long int, int);
+void print_info(struct stat);
+static void mask_ctrl_c();
+//承认用全局变量可以省很多事
+int isPARAM_h = NO;
+int isPARAM_n = NO;
+int isPARAM_i = NO;
 
 int g_leave_len = MAXROWLEN;	//一行剩余长度，用于输出对齐
 int g_maxlen;				//存放某目录下第一行的最长文件名的长度
 
 int main(int argc, char *argv[])
 {
+	mask_ctrl_c();
 	char path[PATH_MAX+1];
 	int num;	//-的数量，用于辅助判断有没有输入文件名或目录名
 	char param[32] = {0};	//保存命令行参数
@@ -75,6 +97,30 @@ int main(int argc, char *argv[])
 			i++;
 			continue;
 		}
+		else if (param[i] == 'r')
+		{
+			flag_param |= PARAM_r;
+			i++;
+			continue;
+		}
+		else if (param[i] == 'h')
+		{
+			isPARAM_h = YES;
+			i++;
+			continue;
+		}
+		else if (param[i] == 'n')
+		{
+			isPARAM_n = YES;
+			i++;
+			continue;
+		}
+		else if (param[i] == 'i')
+		{
+			isPARAM_i = YES;
+			i++;
+			continue;
+		}
 		else
 		{
 			fprintf(stderr, "my_ls: 不适用的选项 -- %c\n", param[i]);	//模拟ubuntu中ls的报错
@@ -110,12 +156,22 @@ int main(int argc, char *argv[])
 				path[strlen(argv[i])] = '/';
 				path[strlen(argv[i])+1] = '\0';
 			}
-			display_dir(flag_param, path);
+			if (flag_param & PARAM_R)
+			{
+				display_dir_R(flag_param, path);
+			}
+			else
+				display_dir(flag_param, path);
 		}
 		//如果是文件
 		else
 		{
 			display(flag_param, path);
+			//如果只有一个文件
+			if (num+2 == argc)
+			{
+				putchar('\n');
+			}
 		}
 	}
 	return 0;
@@ -158,16 +214,43 @@ void display(int flag, const char *path)
 	}
 	basename[j] = '\0';
 	//	printf("%s\n", basename);
+	//printf("%s\n", path);
 	if (lstat(path, &statbuf) == -1)
 	{
+		// printf("%s\n", path);
 		my_err("lstat", __LINE__);
+		//return;
 	}
+	if (isPARAM_i == YES)
+	{
+		if (flag & PARAM_A)	//如果有a参数
+		{
+			if (g_leave_len < g_maxlen)
+			{
+				putchar('\n');
+				g_leave_len = MAXROWLEN;
+			}	
+			printf("%-8d ", (int)statbuf.st_ino);
+		}
+		else if (basename[0] != '.')
+		{
+			if (g_leave_len < g_maxlen)
+			{
+				putchar('\n');
+				g_leave_len = MAXROWLEN;
+			}
+			printf("%-8d ", (int)statbuf.st_ino);
+		}
+	}
+	//屏蔽掉r参数
+	flag = flag & (~PARAM_r);
 	color = get_color(statbuf);
 	switch (flag)
 	{
 		case PARAM_NONE:
 			if (basename[0] != '.')
 			{
+				//putchar('*');
 				display_single(basename, color);
 			}
 			break;
@@ -206,8 +289,7 @@ void display(int flag, const char *path)
 
 void display_dir(int flag_param, const char *path)
 {
-
-
+	g_leave_len = 80;
 	DIR *dir;
 	struct dirent *ptr;	//pointer recorder
 	int count = 0;
@@ -245,11 +327,14 @@ void display_dir(int flag_param, const char *path)
 		strncpy(filenames[i], path, len);
 		filenames[i][len] = '\0';
 		strcat(filenames[i], ptr->d_name);
+		//filenames[i][len+strlen(ptr->d_name)] = '/';
+		//filenames[i][len+strlen(ptr->d_name)+1] = '\0';
 		filenames[i][len+strlen(ptr->d_name)] = '\0';
 	}
 	//冒泡排序
 	for (int i = 0; i < count-1; i++)
 	{
+		//printf("***%s\n", filenames[i]);
 		for (int j = 0; j < count-1-i; j++)
 		{
 			if (strcmp(filenames[j], filenames[j+1]) > 0)
@@ -260,10 +345,23 @@ void display_dir(int flag_param, const char *path)
 			}
 		}
 	}
-	for (int i = 0; i < count; i++)
+	if (flag_param & PARAM_r)	//参数r存在
 	{
-		//printf("%s\n", filenames[i]);
-		display(flag_param, filenames[i]);
+		for (int i = count-1; i >= 0; i--)
+		{
+			//printf("%s\n", filenames[i]);
+			//putchar('*');
+			display(flag_param, filenames[i]);
+		}
+	}
+	else	//参数r不存在
+	{
+		for (int i = 0; i < count; i++)
+		{
+			//printf("%s\n", filenames[i]);
+			//putchar('*');
+			display(flag_param, filenames[i]);
+		}
 	}
 	closedir(dir);
 	//如果没有-l选项就打印一个换行符
@@ -274,8 +372,6 @@ void display_dir(int flag_param, const char *path)
 void display_attribute(struct stat buf, const char *name)
 {
 	char buf_time[32];
-	struct passwd *pwd;	//获取用户名
-	struct group *grp;	//获取组名
 	int color = WHITE;
 	//文件类型
 	if(S_ISLNK(buf.st_mode))
@@ -392,13 +488,9 @@ void display_attribute(struct stat buf, const char *name)
 	{
 		color = BLUE;
 	}
-	/*通过uid与gid获取文件所有者的用户名和组名*/
-	pwd=getpwuid(buf.st_uid);
-	grp=getgrgid(buf.st_gid);
 	printf("%d ",(int)buf.st_nlink);   //inode数量
-	printf("%s ",pwd->pw_name);    //用户名
-	printf("%s ",grp->gr_name);    //组名
-	printf("%5ld ",buf.st_size);     //容量大小
+	print_info(buf);
+	print_volume(buf.st_size, isPARAM_h);     //容量大小
 	strcpy(buf_time,ctime(&buf.st_mtime));
 	buf_time[strlen(buf_time)-1]='\0';//去掉换行符
 	printf("%s ",buf_time);//打印文件时间
@@ -410,12 +502,12 @@ void print_name(const char *name, int color)
 {
 	if (color == GREEN)
 	{
-        printf("\033[1m\033[32m%-s\033[0m",name);
-    }
+		printf("\033[1m\033[32m%-s\033[0m",name);
+	}
 	else if (color == BLUE)
 	{
-        printf("\033[1m\033[34m%-s\033[0m",name);
-    }
+		printf("\033[1m\033[34m%-s\033[0m",name);
+	}
 	else if (color == WHITE)
 	{   
 		printf("%-s",name);
@@ -450,4 +542,96 @@ int get_color(struct stat buf)
 		color = GREEN;
 	}
 	return color;
+}
+//打印容量
+void print_volume(long int volume, int isPARAM_h)
+{
+	if (isPARAM_h == YES)
+	{
+		if (volume < KB)
+		{
+			printf("%5ld ", volume);
+		}
+		//注意是4，否则会输出不对齐
+		else if (volume < MB)
+		{
+			printf("%4.1lfK ", volume*1.0/KB);
+		}
+		else if (volume < GB)
+		{
+			printf("%4.1lfM ", volume*1.0/MB);
+		}
+		else
+		{
+			printf("%4.1lfG ", volume*1.0/GB);
+		}
+	}
+	else
+	{
+		printf("%5ld ", volume);
+	}
+}
+//打印用户信息
+void print_info(struct stat buf)
+{
+	if (isPARAM_n == NO)
+	{
+		struct passwd *pwd;	//获取用户名
+		struct group *grp;	//获取组名
+		/*通过uid与gid获取文件所有者的用户名和组名*/
+		pwd=getpwuid(buf.st_uid);
+		grp=getgrgid(buf.st_gid);
+		printf("%s ",pwd->pw_name);    //用户名
+		printf("%s ",grp->gr_name);    //组名
+	}
+	else
+	{
+		printf("%4d ", buf.st_uid);
+		printf("%4d ", buf.st_gid);
+	}
+}
+//这段是网上借鉴的
+static void mask_ctrl_c()
+{
+	sigset_t intmask;
+	sigemptyset(&intmask);/* 将信号集合设置为空 */
+	sigaddset(&intmask,SIGINT);/* 加入中断 Ctrl+C 信号*/
+	/*阻塞信号*/
+	sigprocmask(SIG_BLOCK,&intmask,NULL);
+}
+//R参数递归
+void display_dir_R(int flag_param, const char *path)
+{
+	DIR *dir;
+	struct dirent *ptr;	//pointer recorder
+	char temp_name[PATH_MAX+1];
+	//展示部分
+	printf("%s:\n", path);
+	display_dir(flag_param, path);
+	//printf("%s\n", path);
+	putchar('\n');	
+	//展示完了开始读，读到目录就接着展示
+	if ((dir = opendir(path)) == NULL)
+	{
+		my_err("opendir", __LINE__);
+	}
+	int len = strlen(path);
+	while ((ptr = readdir(dir)) != NULL)
+	{
+		//读出那个dirent来判断文件类型
+		if (ptr->d_type == DT_DIR)
+		{
+			//处理出新的path
+			strncpy(temp_name, path, len);
+			temp_name[len] = '\0';
+			strcat(temp_name, ptr->d_name);	
+			temp_name[len+strlen(ptr->d_name)] = '/';
+			temp_name[len+strlen(ptr->d_name)+1] = '\0';
+			//printf("this %s\n", temp_name);
+			display_dir_R(flag_param, temp_name);
+			return;
+		}
+	}
+	closedir(dir);
+	return;
 }
