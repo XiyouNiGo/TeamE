@@ -219,7 +219,10 @@ void display(int flag, const char *path)
 	if (lstat(path, &statbuf) == -1)
 	{
 		// printf("%s\n", path);
-		my_err("lstat", __LINE__);
+		if (errno != 13)	//防止Permission deny
+			my_err("opendir", __LINE__);
+		else
+			return;
 		//return;
 	}
 	if (isPARAM_i == YES)
@@ -313,7 +316,7 @@ void display_dir(int flag_param, const char *path)
 		count++;
 	}
 	//没有这句会段错误
-	if (count > 256)
+	if (count >= 256)
 	{
 		fprintf(stderr, "too many files under this dir\n");
 		exit(0);
