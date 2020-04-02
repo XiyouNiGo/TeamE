@@ -12,6 +12,7 @@
 #include <errno.h>
 #include "debug.h"
 #include <signal.h>
+#include <errno.h>
 //参数
 #define PARAM_NONE   0                 //无参数
 #define PARAM_A      1                 //-a  显示所有文件
@@ -297,7 +298,11 @@ void display_dir(int flag_param, const char *path)
 	//获取总和最长的文件名
 	if ((dir = opendir(path)) == NULL)
 	{
-		my_err("opendir", __LINE__);
+		//printf("*%d*\n", errno);
+		if (errno != 13)	//防止Permission deny
+			my_err("opendir", __LINE__);
+		else
+			return;
 	}
 	while ((ptr = readdir(dir)) != NULL)
 	{
@@ -307,9 +312,11 @@ void display_dir(int flag_param, const char *path)
 		}
 		count++;
 	}
+	//没有这句会段错误
 	if (count > 256)
 	{
-		my_err("too many files under this dir", __LINE__);
+		fprintf(stderr, "too many files under this dir\n");
+		exit(0);
 	}
 	closedir(dir);
 	if ((dir = opendir(path)) == NULL)
@@ -613,13 +620,16 @@ void display_dir_R(int flag_param, const char *path)
 	//展示完了开始读，读到目录就接着展示
 	if ((dir = opendir(path)) == NULL)
 	{
-		my_err("opendir", __LINE__);
+		if (errno != 13)	//防止Permission deny
+			my_err("opendir", __LINE__);
+		else
+			return;
 	}
 	int len = strlen(path);
 	while ((ptr = readdir(dir)) != NULL)
 	{
 		//读出那个dirent来判断文件类型
-		if (ptr->d_type == DT_DIR)
+		if (ptr->d_type == DT_DIR && (ptr->d_name[0] != '.'))
 		{
 			//处理出新的path
 			strncpy(temp_name, path, len);
@@ -629,7 +639,6 @@ void display_dir_R(int flag_param, const char *path)
 			temp_name[len+strlen(ptr->d_name)+1] = '\0';
 			//printf("this %s\n", temp_name);
 			display_dir_R(flag_param, temp_name);
-			return;
 		}
 	}
 	closedir(dir);
