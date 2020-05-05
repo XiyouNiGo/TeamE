@@ -66,6 +66,7 @@ int init_daemon(void)
             //将文件屏蔽字设置为0
             umask(0);
             //模拟守护进程业务
+            printf("I'm daemon\n");
             while (1);
 
             return 0;

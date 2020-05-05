@@ -5,6 +5,7 @@
   > Mail: nigo@xiyoulinux.org
   > Created Time: 2020年04月25日 星期六 10时10分36秒
  ************************************************************************/
+//这是一个失败品
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,6 +38,7 @@ void init_shell();
 void set_prompt(char*);
 void history();
 int init_daemon();
+void do_cmd_mult_pipe(int, int, char [][256]);
 
 char *line_read = (char *)NULL;
 char prompt[256];
@@ -202,6 +204,7 @@ void do_ex_cmd(int argcount, char arglist[][256])
 {
     int flag = 0;
     int how = 0;        //指示命令中是否有< > |
+    int pipe_in = 0;       //判断是否有管道
     int background = 0; //标识命令中是否有后台运行标识符&
     int status;
     int i;
@@ -255,7 +258,17 @@ void do_ex_cmd(int argcount, char arglist[][256])
         }
         if (strcmp(arg[i], "|") == 0)
         {
-            flag++;
+            //第一次出现让flag++
+            if (pipe_in == 0)
+            { 
+                flag++;
+                pipe_in = 1;
+            }
+            if (strcmp(arg[i+1], "|") == 0)
+            {
+                //紧挨着也不行
+                flag++;
+            }
             how = have_pipe;
             if (arg[i+1] == NULL)
             {
@@ -277,7 +290,7 @@ void do_ex_cmd(int argcount, char arglist[][256])
     if (background == 1)
     {
         int pid3;
-        
+
         if ((pid3 = fork()) < 0)
         {
             my_err("fork error");
@@ -319,21 +332,8 @@ void do_ex_cmd(int argcount, char arglist[][256])
 
     if (how == have_pipe)
     {
-        //把管道符后面部分放入argnext,管道后面的部分是一个可执行的shell命令
-        for (i = 0; arg[i] != NULL; i++)
-        {
-            if (strcmp(arg[i], "|") == 0)
-            {
-                arg[i] = NULL;
-                int j;
-                for (j = i+1; arg[j] != NULL; j++)
-                {
-                    argnext[j-i-1] = arg[j];
-                }
-                argnext[j-i-1] = arg[j];
-                break;
-            }
-        }
+        do_cmd_mult_pipe(0, argcount, arglist);
+        return;
     }
 
     if ((pid = fork()) < 0)
@@ -395,64 +395,10 @@ void do_ex_cmd(int argcount, char arglist[][256])
             }
         }
         break;
-    case have_pipe:
-        {
-            if (pid == 0)
-            {
-                int pid2;
-                int status2;
-                int fd2;
-
-                if ((pid2 = fork()) < 0)
-                {
-                    my_err("fork error");
-                }
-                else if (pid2 == 0)
-                {
-                    if (!(find_command(arg[0])))
-                    {
-                        printf("%s: command not found\n", arg[0]);
-                        exit(0);
-                    }
-                    //实际上这里也可以用pipe
-                    if ((fd2 = open("/tmp/youdonotknowfile", O_RDWR|O_CREAT|O_TRUNC, 0644)) == -1)
-                    {
-                        my_err("open error");
-                    }
-                    dup2(fd2, STDOUT_FILENO);
-                    execvp(arg[0], arg);
-                    exit(0);
-                }
-                else
-                {
-                    if (waitpid(pid2, &status2, 0) == -1)
-                    {
-                        my_err("waitpid error");
-                    }
-                    if (!(find_command(argnext[0])))
-                    {
-                        printf("%s: command not found\n", arg[0]);
-                        exit(0);
-                    }
-                    if ((fd2 = open("/tmp/youdonotknowfile", O_RDONLY)) == -1)
-                    {
-                        my_err("open error");
-                    }
-                    dup2(fd2, STDIN_FILENO);
-                    if (remove("/tmp/youdonotknowfile"))
-                    {
-                        my_err("remove error");
-                    }
-                    execvp(argnext[0], argnext);
-                    exit(0);
-                }
-                break;
-            }
-        }
     default:
         break;
     }
-    
+
     ///父进程等待子进程结束
     if (waitpid(pid, &status, 0) == -1)
     {
@@ -608,7 +554,7 @@ int init_daemon(void)
     signal(SIGTTIN, SIG_IGN);
     signal(SIGHUP, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);   //防止产生僵尸进程
-    
+
     if ((pid = fork()) == -1)
     {
         my_err("fork error");
@@ -637,6 +583,111 @@ int init_daemon(void)
             signal(SIGHUP, SIG_IGN);
             //活下来的只有孙进程
             return 0;
+        }
+    }
+}
+//递归实现多重管道
+void do_cmd_mult_pipe(int left, int right, char arglist[][256])
+{
+    if (left > right)
+    {
+        return;
+    }
+    int index_pipe = -1;
+    for (int i = left; i < right; i++)
+    {
+        if (strcmp(arglist[i], "|") == 0)
+        {
+            index_pipe = i;
+            break;
+        }
+    }
+    //无管道符
+    if (index_pipe == -1)
+    {
+        pid_t pid;
+        //把有效参数复制到arg
+        char *arg[right-left+2];
+        arg[right-left+1] = NULL;
+        for (int j = left; j < right; j++)
+        {
+            arg[j-left] = arglist[j];
+        }
+
+        if ((pid = fork()) == -1)
+        {
+            my_err("fork error");
+        }
+        else if (pid == 0)
+        {
+            if (!(find_command(arg[0])))
+            {
+                printf("%s: command not found\n", arg[0]);
+                exit(0);
+            }
+            execvp(arg[0], arg);
+            exit(0);
+        }
+        else 
+        {
+            return;
+        }
+    }
+    //有管道符
+    else
+    {
+        int fd[2];
+        if (pipe(fd) == -1)
+        {
+            perror("pipe error");
+            return;
+        }
+        pid_t pid = vfork();
+        if (pid == -1)
+        {
+            perror("vfork error");
+            return;
+        }
+        else if (pid == 0)
+        {
+            pid_t pid1;
+
+            close(fd[0]);
+            dup2(fd[1], STDOUT_FILENO);
+
+            char *arg[index_pipe-left+2];
+            arg[index_pipe-left+1] = NULL;
+            for (int j = left; j < index_pipe; j++)
+            {
+                arg[j-left] = arglist[j];
+            }
+
+            if ((pid1 = fork()) == -1)
+            {
+                my_err("fork error");
+            }
+            else if (pid1 == 0)
+            {
+                if (!(find_command(arg[0])))
+                {
+                    printf("%s: command not found\n", arg[0]);
+                    exit(0);
+                }
+                execvp(arg[0], arg);
+                exit(0);
+            }
+            else 
+            {
+                exit(0);
+            }
+        }
+        else
+        {
+            wait(NULL);
+            close(fd[1]);
+            dup2(fd[0], STDIN_FILENO);
+            close(fd[0]);
+            do_cmd_mult_pipe(index_pipe+1, right, arglist);
         }
     }
 }
