@@ -17,7 +17,7 @@ int main()
 		perror("open /dev/tty");
 		exit(1);
 	}
-	for (int i = 0; i < 5; i++)
+	while (1)
 	{
 		if ((ret = read(fd, buf, 10)) < 0)
 		{
@@ -32,6 +32,10 @@ int main()
 				sleep(2);
 			}
 		}
+        else
+        {
+            break;
+        }
 	}
 
 	write(STDOUT_FILENO, buf, ret);

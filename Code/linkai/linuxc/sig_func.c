@@ -13,7 +13,7 @@
 
 void print_set(sigset_t *set)
 {
-    for (int i = 0; i < 32; i++)
+    for (int i = 1; i < 32; i++)
     {
         printf("%d", sigismember(set, i));
     }
