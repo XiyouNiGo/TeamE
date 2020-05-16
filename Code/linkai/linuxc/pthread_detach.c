@@ -1,9 +1,9 @@
 
 /*************************************************************************
-    > File Name: try1.c
+    > File Name: pthread_detach.c
     > Author: NiGo
     > Mail: nigo@xiyoulinux.org
-    > Created Time: 2020年05月04日 星期一 20时07分08秒
+    > Created Time: 2020年05月13日 星期三 11时32分54秒
  ************************************************************************/
 
 #include <stdio.h>
@@ -12,14 +12,16 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/types.h>
-#include <sys/wait.h>
+#include <pthread.h>
+#include <string.h>
 
-
-int main ()
+void my_err(const char *str)
 {
-   printf("PATH : %s\n", getenv("PATH"));
-   printf("HOME : %s\n", getenv("HOME"));
-   printf("ROOT : %s\n", getenv("ROOT"));
+     perror(str);
+     exit(1);
+}
 
-   return(0);
+int main(int argc, char *argv[])
+{
+
 }
