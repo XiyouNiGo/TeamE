@@ -38,7 +38,7 @@ void *consumer(void *arg)
     {
         struct message *temp;
         pthread_mutex_lock(&mutex);
-        if (head == NULL)
+        if (head == NULL)   //多个消费者时用while,因为broadcast之后如有多个消费者阻塞，却只有一个数据，会发生段错误
         {
             //阻塞等待条件变量，并解锁（返回时重新加锁）
             pthread_cond_wait(&has_product, &mutex);
@@ -72,7 +72,7 @@ void *producer(void *arg)
         //解锁
         pthread_mutex_unlock(&mutex);
         //唤醒阻塞在has_product上的线程
-        pthread_cond_signal(&has_product);
+        pthread_cond_signal(&has_product);//多个消费者:phread_cond_broadcast(&has_product);
         sleep(rand() % 3);
     }
 
