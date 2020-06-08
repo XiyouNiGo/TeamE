@@ -56,13 +56,13 @@ int main(int argc, char *argv[])
     while (1)
     {
         int ret = read(new_fd, buf, sizeof(buf));
-        write(STDOUT_FILENO, buf, sizeof(buf));
+        write(STDOUT_FILENO, buf, ret);
         for (int i = 0; i < ret; i++)
         {
             buf[i] = toupper(buf[i]);
         }
 
-        write(new_fd, buf, sizeof(buf));
+        write(new_fd, buf, ret);
     }
 
     close(socket_fd);
