@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <pthread.h>
@@ -26,13 +27,13 @@ void my_err(const char *str)
 int main(int argc, char *argv[])
 {
     int socket_fd, new_fd;
-    char buf[BUFSIZ];
+    char buf[BUFSIZ], client_ip[1024];
     struct sockaddr_in server_addr, client_addr;
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(SERV_PORT);
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     socklen_t len_client = sizeof(client_addr);
-    //创建套接字
+    //创建套接字(用于监听)
     if ((socket_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
     {
         my_err("socket error");
@@ -52,7 +53,10 @@ int main(int argc, char *argv[])
     {
         my_err("accept error");
     }
-
+    //打印客户端信息
+    printf("client : ip = %s, port = %d\n", 
+           inet_ntop(AF_INET, &client_addr.sin_addr.s_addr, client_ip, sizeof(client_ip)),
+           ntohs(client_addr.sin_port));
     while (1)
     {
         int ret = read(new_fd, buf, sizeof(buf));
@@ -61,7 +65,7 @@ int main(int argc, char *argv[])
         {
             buf[i] = toupper(buf[i]);
         }
-
+        //printf("ret = %d\n", ret);
         write(new_fd, buf, ret);
     }
 
