@@ -26,7 +26,7 @@ void my_err(const char *str)
 
 int main(int argc, char *argv[])
 {
-    int socket_fd, new_fd;
+    int listen_fd, connect_fd;
     char buf[BUFSIZ], client_ip[1024];
     struct sockaddr_in server_addr, client_addr;
     server_addr.sin_family = AF_INET;
@@ -34,22 +34,22 @@ int main(int argc, char *argv[])
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     socklen_t len_client = sizeof(client_addr);
     //创建套接字(用于监听)
-    if ((socket_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+    if ((listen_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
     {
         my_err("socket error");
     }
     //绑定地址结构(IP & port)
-    if (bind(socket_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1)
+    if (bind(listen_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1)
     {
         my_err("bind error");
     }
     //设置最大监听客户端数量
-    if (listen(socket_fd, 128) == -1)
+    if (listen(listen_fd, 128) == -1)
     {
         my_err("listen error");
     }
     //阻塞等待客户端响应
-    if ((new_fd = accept(socket_fd, (struct sockaddr*)&client_addr, &len_client)) == -1)
+    if ((connect_fd = accept(listen_fd, (struct sockaddr*)&client_addr, &len_client)) == -1)
     {
         my_err("accept error");
     }
@@ -59,18 +59,18 @@ int main(int argc, char *argv[])
            ntohs(client_addr.sin_port));
     while (1)
     {
-        int ret = read(new_fd, buf, sizeof(buf));
+        int ret = read(connect_fd, buf, sizeof(buf));
         write(STDOUT_FILENO, buf, ret);
         for (int i = 0; i < ret; i++)
         {
             buf[i] = toupper(buf[i]);
         }
         //printf("ret = %d\n", ret);
-        write(new_fd, buf, ret);
+        write(connect_fd, buf, ret);
     }
 
-    close(socket_fd);
-    close(new_fd);
+    close(listen_fd);
+    close(connect_fd);
 
     return 0;
 }
