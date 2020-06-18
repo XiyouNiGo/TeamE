@@ -12,11 +12,20 @@
 //定义字典结构
 typedef struct
 {
-    char **sequence; //实际指向字符串的二级指针
+    char **sequence;//实际指向字符串的二级指针
     int *code;      //给字符串编号
     int size;       //当前长度
     int max_size;   //最大长度
 }Dictionary;
+//压缩后的编码
+int key[1000];
+//对应下标
+int count = 0;
+//向key中插入编码
+void insert_key(int code)
+{
+    key[count++] = code;
+}
 //向字典中插入字符串str
 void insert_sequence(Dictionary *dict, char *str)
 {
@@ -43,6 +52,18 @@ void init_dictionary(Dictionary *dict, int max_size)
         letter[0]++;
     }
 }
+//查询字符串是否存在,存在返回编码
+int get_code(Dictionary *dict, char *str)
+{
+    for (int i = 0; i < dict->size; i++)
+    {
+        if (strcmp(dict->sequence[i], str) == 0)
+        {
+            return dict->code[i];
+        }
+    }
+    return -1;
+}
 //打印字典
 void print_dictionary(Dictionary *dict)
 {
@@ -56,11 +77,63 @@ void print_dictionary(Dictionary *dict)
     printf("====================\n");
 }
 
+void print_key()
+{
+    for (int i = 0; i < count; i++)
+    {
+        printf("%d ", key[i]);
+    }
+    putchar('\n');
+}
+//压缩编码
+void lzw_encode(char *text, Dictionary *dict)
+{
+    char current[1000];
+    char next;
+    int code;
+    int i = 0;
+    while (i < strlen(text) - 2)
+    {
+        //先把第i个字符存入(对于后续循环，该处也有一个清空current的作用)
+        sprintf(current, "%c", text[i]);
+        next = text[i+1];
+        //反复查询并添加current,直到current为最新,退出循环
+        while (get_code(dict, current) != -1)
+        {
+            //  i   current     next
+            //  T         T      O  
+            //  O        TO      B
+            //  B       TOB      C
+            sprintf(current, "%s%c", current, next);
+            i++;
+            next = text[i+1];
+        }
+        insert_sequence(dict, current);
+        char copy[1000];
+        //编码并插入数组key(去掉最后的字母,因为是字典里的)
+        strcpy(copy, current);
+        copy[strlen(current) - 1] = '\0';
+        insert_key(get_code(dict, copy));
+    }
+}
+//解压编码
+void lzw_decode(Dictionary *dict)
+{
+
+}
+
 int main(int argc, char *argv[])
 {
     Dictionary dict;
+    char *text = "TOBEORNOTTOBEORTOBEORNOT";
     init_dictionary(&dict, 100);
-    print_dictionary(&dict);
-
+    lzw_encode((char*)text, &dict);
+    //print_dictionary(&dict);
+    printf("Text : \n%s\n", text);
+    printf("Code : \n");
+    print_key();
+    //重新初始化用于解码
+    init_dictionary(&dict, 100);
+    lzw_decode;
     return 0;
 }
