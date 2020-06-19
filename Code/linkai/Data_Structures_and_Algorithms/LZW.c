@@ -52,7 +52,7 @@ void init_dictionary(Dictionary *dict, int max_size)
         letter[0]++;
     }
 }
-//查询字符串是否存在,存在返回编码
+//已知字符串,查询字符串是否存在,存在返回编码(压缩用)
 int get_code(Dictionary *dict, char *str)
 {
     for (int i = 0; i < dict->size; i++)
@@ -63,6 +63,11 @@ int get_code(Dictionary *dict, char *str)
         }
     }
     return -1;
+}
+//已知编码,获取字符串(解压用)
+char *get_sequence(Dictionary *dict, int code)
+{
+    return dict->sequence[code];
 }
 //打印字典
 void print_dictionary(Dictionary *dict)
@@ -110,7 +115,7 @@ void lzw_encode(char *text, Dictionary *dict)
         }
         insert_sequence(dict, current);
         char copy[1000];
-        //编码并插入数组key(去掉最后的字母,因为是字典里的)
+        //编码并存入数组key(去掉最后的字母,因为是字典里的)
         strcpy(copy, current);
         copy[strlen(current) - 1] = '\0';
         insert_key(get_code(dict, copy));
@@ -119,7 +124,22 @@ void lzw_encode(char *text, Dictionary *dict)
 //解压编码
 void lzw_decode(Dictionary *dict)
 {
-
+    int code;
+    char prev[1000];
+    char *output;
+    output = get_sequence(dict, key[0]);
+    //第一项无前一项，单独输出   
+    printf("%s", output);
+    for (int i = 1; i < count; i++)
+    {
+        code = key[i];
+        strcpy(prev, output);
+        output = get_sequence(dict, code);
+        printf("%s", output);
+        //此处把prev作为一个临时字符串(反正上面strcpy时会更新)
+        sprintf(prev, "%s%c", prev, output[0]);
+        insert_sequence(dict, prev);
+    }
 }
 
 int main(int argc, char *argv[])
@@ -128,12 +148,13 @@ int main(int argc, char *argv[])
     char *text = "TOBEORNOTTOBEORTOBEORNOT";
     init_dictionary(&dict, 100);
     lzw_encode((char*)text, &dict);
-    //print_dictionary(&dict);
+    print_dictionary(&dict);
     printf("Text : \n%s\n", text);
     printf("Code : \n");
     print_key();
     //重新初始化用于解码
     init_dictionary(&dict, 100);
-    lzw_decode;
+    printf("Decode : \n");
+    lzw_decode(&dict);
     return 0;
 }
