@@ -41,7 +41,6 @@ typedef struct
     int r, n;
 }CTree;
 */
-
 typedef char Elemtype;
 
 typedef struct BiTNode
@@ -100,3 +99,57 @@ void CreateBiTree(BiTree *T)
         CreateBiTree(&(*T)->rchild);
     }
 }
+/* 线索二叉树
+typedef enum {Link, Thread} PointeRTag;
+
+typedef struct BiThrNode
+{
+    Elemtype data;
+    struct BiThrNode *lchild, *rchild;
+    PointeRTag LTag;
+    PointeRTag RTag;
+}BiThrNode, *BiThrTree;
+
+BiThrTree pre;
+//中序线索化
+void InThreading(BiThrTree p)
+{
+    if (p)
+    {
+        InThreading(p->lchild);
+
+        if (!p->lchild)
+        {
+            p->LTag = Thread;
+            p->lchild = pre;
+        }
+        if (!pre->rchild)
+        {
+            pre->RTag = Thread;
+            pre->rchild = p;
+        }
+        pre = p;
+
+        InThreading(p->rchild);
+    }
+}
+//T指向头结点，头结点lchild指向根节点，rchild指向中序遍历的最后一个节点
+int InOrderTraverse_Thr(BiThrTree T)
+{
+    BiThrTree p = T->lchild;    //指向根节点
+    while (p != T)  //空树或遍历结束
+    {
+        //找到中序序列的第一个节点
+        while (p->LTag == Link)
+            p = p->lchild;
+        printf("%c", p->data);
+        while (p->RTag == Thread && p->rchild != T)
+        {
+            p = p->rchild;
+            printf("%c", p->data);
+        }
+        p = p->rchild;
+    }
+    return 1;
+}
+*/
