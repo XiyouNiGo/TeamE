@@ -2,7 +2,6 @@
 //求解有向网G的v0顶点到其余顶点v最短路径P[v]及带权长度D[v]
 //P[v]:前驱下标顶点，D[v]:v0到v的最短路径长度
 
-#include <stdio.h>
 #include "MGraph.c"
 
 #define  MAXVEX 9

@@ -25,9 +25,31 @@ void Floyd(MGraph G, PathMatirx *P, ShortPathTable *D)
                 {
                     //如果经过下标k顶点路径比原两点间路径更短
                     (*D)[v][w] = (*D)[v][k] + (*D)[k][w];
+                    
                     (*P)[v][w] = (*P)[v][k];
                 }
             }
         }
     }
+}
+//通过P和D求具体路径和权
+void PrintPath(MGraph G, PathMatirx P, ShortPathTable D)
+{
+    int v, w, k;
+    for (v = 0; v < G.numVertexes; v++)
+    {
+        for (w = v + 1; w < G.numVertexes; w++)
+        {
+            printf("v%d-v%d weight: %d ", v, w, D[v][w]);
+            k = P[v][w];
+            printf("path: %d", v);
+            while (k != w)
+            {
+                printf(" -> %d");
+                k = P[k][w];
+            }
+            printf(" -> %d\n", w);
+        }
+    }
+    printf("\n");
 }
