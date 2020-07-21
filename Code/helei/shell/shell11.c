@@ -17,22 +17,20 @@
 //屏蔽ctrl + c 终止进程
 #include<dirent.h>
 #include<pwd.h>
-#include<readline/history.h>
-
 
 
 #define normal         0
 #define out_redirect   1
 #define in_redirect    2
 #define have_pipe      3
-#define double_have_pipe 4
+
 
 void print_prompt();
 void get_input(char *buf);
 void explain_input(char *buf,int *argcount,char arglist[100][256]);
 void do_cmd(int argcount,char arglist[100][256]);
 int find_command(char *command);
-void history();
+
 
 int main(int argc, char *argv[])
 {
@@ -54,7 +52,7 @@ int main(int argc, char *argv[])
         memset(buf,0,256);
         print_prompt();
         get_input(buf);
-        //write_history("history_command");
+
         if(strcmp(buf,"exit\n") == 0 || strcmp(buf,"logout\n") == 0)
             break;
         for(i=0;i<100;i++)
@@ -98,7 +96,6 @@ void get_input(char *buf)
     buf[len] = '\n';
     len ++;
     buf[len] = '\0';
-    add_history(buf);
 }
 
 void explain_input(char *buf,int *argcount, char arglist[100][256])
@@ -141,7 +138,6 @@ void do_cmd(int argcount,char arglist[100][256])
     
     char *arg[argcount+1];
     char * argnext[argcount + 1];
-    char * argnext2[argcount + 1];
     char *file;
     pid_t pid;
     for(i=0;i<argcount;i++)
@@ -214,10 +210,6 @@ void do_cmd(int argcount,char arglist[100][256])
             }
     }*/
     }
-    if(strcmp(arg[0],"history") == 0)
-    {
-        history();
-    }
     for(int i = 0 ; arg[i] != NULL ; i++)
     {
         if(strcmp(arg[i],">") == 0)
@@ -245,11 +237,11 @@ void do_cmd(int argcount,char arglist[100][256])
         }
     }
 
-    /*if(flag>1)
+    if(flag>1)
     {
         printf("Wrong command\n");
         return ;
-    }*/
+    }
     if(how == out_redirect)
     {
         for(i = 0;arg[i]!=NULL;i++)
@@ -274,10 +266,9 @@ void do_cmd(int argcount,char arglist[100][256])
             }
         }
     }
-    // 多重管道 
     if(how == have_pipe)
     {
-        /*for(i = 0;arg[i]!=NULL;i++ )
+        for(i = 0;arg[i]!=NULL;i++ )
         {
             if(strcmp(arg[i],"|") == 0)
             {
@@ -289,33 +280,6 @@ void do_cmd(int argcount,char arglist[100][256])
                 }
                 argnext[j-i-1] = arg[j];
                 break;
-            }
-        }*/
-        int i= 0;
-        
-        for(i = 0;arg[i] != NULL;i++)
-        {
-            if(strcmp(arg[i],"|") == 0)
-            {
-                arg[i] = NULL;
-                int j;
-                for(j = i+1;arg[j] != NULL; j++)
-                {
-                    if(strcmp(arg[j],"|" ) == 0)
-                    {
-                        arg[j] = NULL;
-                        int k;
-                        for(k = j+1;arg[k] != NULL; k++)
-                        {
-                            argnext2[k-j-1] = arg[k];
-                            how = double_have_pipe;
-                        }
-
-                    }
-                    else
-                        argnext[j-i-1] =arg[j];
-                    
-                }
             }
         }
     
@@ -379,7 +343,7 @@ void do_cmd(int argcount,char arglist[100][256])
             int pid2;
             int status2;
             int fd2;
-            if((pid2 = fork())<0)          //子进程
+            if((pid2 = fork())<0)
             {
                 printf("fork2 error\n");
                 return ;
@@ -396,7 +360,7 @@ void do_cmd(int argcount,char arglist[100][256])
                 execvp(arg[0],arg);
                 exit(0);
             }
-            if(waitpid(pid2,&status2,0) == -1)      //退出子进程
+            if(waitpid(pid2,&status2,0) == -1)
             {
                 printf("wait for child process error\n");
             }
@@ -412,69 +376,6 @@ void do_cmd(int argcount,char arglist[100][256])
                 printf("remove error\n");
             exit(0);
         }
-        break;
-    case 4:
-        if(pid == 0)
-        {
-            int pid1,pid2;
-            int status1,status2;
-            int fd1,fd2;
-            if(pid1 = fork()<0)
-            {
-                printf("%d : fork failed",__LINE__);
-            }
-            else if(pid1 == 0)      //子进程
-            {
-                pid2 = fork();
-                if(pid2<0)
-                {
-                    printf("%d : fork failed",__LINE__);
-                    exit(0);
-                }
-                else if(pid2 == 0)
-                {
-                    fd2 = open("/tmp/youdonotknowfile1",O_WRONLY | O_CREAT | O_TRUNC ,0644);
-                    dup2(fd2,1);
-                    execvp(arg[0],arg);
-                    exit(0);
-                }
-                if(waitpid(pid2,&status2,0) == -1)
-                {
-                    printf("%d : wait child process failed",__LINE__);
-                    exit(0);
-                }
-                if(!find_command(argnext[0]))
-                {
-                    printf("%d : find  command  failed");
-                    exit(0);
-                }
-                fd2 = open("/tmp/youdonotknowfile1",O_RDONLY);
-                fd1 = open("/tmp/youdonotknowfile2",O_WRONLY |O_CREAT | O_TRUNC,0644);
-                dup2(fd2,0);
-                dup2(fd1,1);
-                execvp(argnext[0],argnext);
-                exit(0);
-            }
-            if(waitpid(pid2,&status1,0) == -1)
-            {
-                printf("%d : wait child process failed");
-                exit(0);
-            }
-            if(!(find_command(argnext2[0])))
-            {
-                printf("%d :  command not found");
-                exit(0);
-            }
-            /*fd1 = open("/tmp/youdonotknowfile2",O_RDONLY);
-            dup2(fd1,0);
-            execvp(argnext2[0],argnext2);
-            exit(0);*/
-
-        }
-
-            int fd1 = open("/tmp/youdonotknowfile2",O_RDONLY);
-            dup2(fd1,0);
-            execvp(argnext2[0],argnext2);
         break;
     default:
             break;
@@ -513,17 +414,4 @@ int find_command(char *command)
         i++;
     }
     return 0;
-}
-void history()
-{
-    int fd = 0;
-    char *buf = (char *)malloc(sizeof(char )*1000);
-    if(fd = open("/tmp/history",O_RDWR)<0)
-    {
-        perror("find history failed");
-        exit(0);
-    }
-    read(fd,buf,sizeof(buf));
-    write(1,buf,strlen(buf));
-    free(buf);
 }

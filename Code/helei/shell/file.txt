@@ -1,0 +1,16 @@
+calculate.sh
+canshu1.sh
+canshu2.sh
+canshu3.sh
+file.txt
+hello.sh
+myshell
+readline.c
+read.sh
+shell
+shell1
+shell1.c
+shell.c
+tiaosh
+tiaoshi.c
+xx
