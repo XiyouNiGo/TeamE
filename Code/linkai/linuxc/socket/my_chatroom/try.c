@@ -5,18 +5,20 @@
     > Mail: nigo@xiyoulinux.org
     > Created Time: 2020年07月22日 星期三 22时14分14秒
  ************************************************************************/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <pthread.h>
 #include "my_config.h"
+#include "thread_pool.h"
 
-
-int main(int argc, char *argv[])
+void *work(void *arg)
 {
-    my_err("test");
+    printf("%d\n", *(int*)arg);
+}
+int main()
+{
+    thread_pool_t *pool = create_thread_pool(10, 100, 100);
+    sleep(5);//模拟线程处理任务
+    thread_pool_destory(pool);
+    return 0;
 }
