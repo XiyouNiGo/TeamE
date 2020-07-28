@@ -177,7 +177,7 @@ int thread_pool_destory(thread_pool_t *pool)
         pthread_cond_broadcast(&pool->queue_not_empty);
 
     for (i = 0; i < pool->alive_thread_num; i++)
-        pthread_join(pool->alive_thread_num, NULL);
+        pthread_join(pool->threads[i], NULL);
 
     thread_pool_free(pool);
 

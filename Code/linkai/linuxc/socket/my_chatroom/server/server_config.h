@@ -10,6 +10,6 @@
                                     fprintf(stderr, "(File:%s, Line:%d) ", __FILE__, __LINE__); \
                                     perror(format); \
                                     exit(1); \
-                                }
+                           } \
 
 #endif
