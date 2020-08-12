@@ -16,7 +16,6 @@
 
 int main(int argc, char **argv)
 {
-    thread_pool_t *pool = create_thread_pool(MIN_TH_NUM, MAX_TH_NUM, QUEUESIZE_MAX);
     int i, listen_fd, connect_fd, sock_fd;
     int n, num = 0;
     int opt = 1;
@@ -53,6 +52,7 @@ int main(int argc, char **argv)
     {
         my_err("mysql_set_character_set error");
     }
+    thread_pool_t *pool = create_thread_pool(MIN_TH_NUM, MAX_TH_NUM, QUEUESIZE_MAX);
     //设置所有用户为离线
     mysql_query(&mysql, "UPDATE user_info SET state = 0");
     //申请主动套接字

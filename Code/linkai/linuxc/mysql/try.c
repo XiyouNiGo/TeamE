@@ -29,6 +29,7 @@ void *func(void *arg)
 {
     //pthread_mutex_lock(&mutex);
     mysql_init(&mysql);
+    //char query[256] = "SELECT * FROM user_info";
     if (mysql_real_connect(&mysql, "127.0.0.1", "root", "root", "chatroom", 0, NULL, 0) == NULL)
     {
         my_err("mysql_real_connect error");

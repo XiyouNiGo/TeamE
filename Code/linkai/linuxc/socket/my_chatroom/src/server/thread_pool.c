@@ -243,6 +243,14 @@ pfunc thread_pool_get_func(int flag)
         return test_func;
     if (flag == REGISTER_USER)
         return register_user; 
+    if (flag == RETRIEVE_PWD)
+        return retrieve_pwd;
+    if (flag == PRIVATE_CHAT)
+        return private_chat;
+    if (flag == ADD_FRIEND_REQ)
+        return add_friend_req;
+    if (flag == ADD_FRIEND_RES)
+        return add_friend_res;
 }
 //用于测试
 void *test_func(void *arg, int connect_fd)
