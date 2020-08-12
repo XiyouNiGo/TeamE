@@ -636,41 +636,103 @@ void *del_friend(void *arg, int connect_fd)
 
     free(arg);
 }
+//查询好友
 void *inq_friend(void *arg, int connect_fd)
 {
     int num;
-    char *output[8];
+    char *output[1];    //被查询者的账号
     char *pack_str = ((struct packet*)arg)->buf;
     char query[256];
-    MYSQL_RES *result;
     int flag;
+    MYSQL_RES *result;
     struct packet ret_pack;
+
     parse_string(pack_str, output, &num);
+    sprintf(query, "SELECT uid, account, nickname, gender, birthday, location, signature, state "
+            " FROM user_info WHERE account = %s", output[0]);
     pthread_mutex_lock(&mysql_lock);
     if (mysql_query(&mysql, query) < 0)
             my_err("mysql_query error");
     if ( (result = mysql_store_result(&mysql)) == NULL)
             my_err("mysql_store_result error");
     pthread_mutex_unlock(&mysql_lock);
+    //失败直接返回失败
+    if (mysql_num_rows(result) == 0)
+    {
+        flag = REFUSE;
+        *(ret_pack.buf) = '\0';
+    }
+    //成功则返回uid,账号，昵称，性别，生日，位置，签名，状态
+    else
+    {
+        flag = ACCEPT;
+        MYSQL_ROW row = mysql_fetch_row(result);
+        memset(ret_pack.buf, 0, 1024);
+        for (int i = 0; i < 8; i++)
+        {
+            strcat(ret_pack.buf, row[i]);
+            strcat(ret_pack.buf, "\036");
+        }
+    }
+    bale_packet(&ret_pack, strlen(ret_pack.buf), INQ_FRIEND * flag);
+    my_write(connect_fd, ret_pack);
     mysql_free_result(result);
     free(arg);
 }
+//列出好友
 void *list_friend(void *arg, int connect_fd)
 {
     int num;
-    char *output[8];
+    char *output[1];    //账号
     char *pack_str = ((struct packet*)arg)->buf;
     char query[256];
     MYSQL_RES *result;
-    int flag;
     struct packet ret_pack;
     parse_string(pack_str, output, &num);
+    int uid = get_uid_account(output[0]);
+    //找到好友
+    sprintf(query, "SELECT uid1, uid2 FROM user_relation WHERE uid1 = %d OR uid2 = %d",
+            uid, uid);
+
     pthread_mutex_lock(&mysql_lock);
     if (mysql_query(&mysql, query) < 0)
             my_err("mysql_query error");
     if ( (result = mysql_store_result(&mysql)) == NULL)
             my_err("mysql_store_result error");
     pthread_mutex_unlock(&mysql_lock);
+    //返回uid, 账号, 昵称
+    memset(ret_pack.buf, 0, 1024);
+    int count = mysql_num_rows(result);
+    for (int i = 0; i < count; i++)
+    {
+        MYSQL_ROW row = mysql_fetch_row(result);
+        for (int j =0; j < 2; j++)
+        {
+            if (atoi(row[j]) != uid)
+            {
+                MYSQL_RES *result_temp;
+                sprintf(query, "SELECT uid, account, nickname WHERE uid = %s",
+                        row[j]);
+                pthread_mutex_lock(&mysql_lock);
+                if (mysql_query(&mysql, query) < 0)
+                    my_err("mysql_query error");
+                if ( (result_temp = mysql_store_result(&mysql)) == NULL)
+                    my_err("mysql_store_result error");
+                pthread_mutex_unlock(&mysql_lock);
+                for (int k = 0; k < (int)mysql_num_rows(result_temp); k++)
+                {
+                    MYSQL_ROW row_temp = mysql_fetch_row(result_temp);
+                    for (int l = 0; l < 3; l++)
+                    {
+                        strcat(ret_pack.buf, row_temp[l]);
+                        strcat(ret_pack.buf, "\036");
+                    }
+                }
+            }
+        }
+    }
+    bale_packet(&ret_pack, strlen(ret_pack.buf), LIST_FRIEND);
+    my_write(connect_fd, ret_pack);
     mysql_free_result(result);
     free(arg);
 }
@@ -741,13 +803,40 @@ void *group_chat(void *arg, int connect_fd)
     struct packet ret_pack;
     
     parse_string(pack_str, output, &num);
-    
+    int uid = get_uid_account(output[0]);
+    //查出所有群员
+    sprintf(query, "SELECT uid FROM group_member WHERE gid = %s", output[1]);
     pthread_mutex_lock(&mysql_lock);
     if (mysql_query(&mysql, query) < 0)
-            my_err("mysql_query error");
+        my_err("mysql_query error");
     if ( (result = mysql_store_result(&mysql)) == NULL)
-            my_err("mysql_store_result error");
+        my_err("mysql_store_result error");
     pthread_mutex_unlock(&mysql_lock);
+    int count = mysql_num_rows(result);
+    //依次处理
+    for (int i = 0; i < count; i++)
+    {
+        int state = 0;
+        char timestamp[24];
+        get_timestamp(timestamp);
+        char nickname[64];
+        get_nickname_account(output[0], nickname);
+        char group_name[64];
+        get_grpname_gid(output[1], group_name);
+        //依次判断是否在线，在线发送，离线存入消息
+        MYSQL_ROW row = mysql_fetch_row(result);
+        sprintf(ret_pack.buf, "%s\036%s\036%s\036%s\036", nickname, group_name, output[2], timestamp);
+        if (is_user_online_uid(row[0]))
+        {
+            state |= MSG_READ;
+            //发回昵称、群名、内容以及时间
+            int cfd = get_cfd_account(row[0]);
+            bale_packet(&ret_pack, strlen(ret_pack.buf), GROUP_CHAT);
+            my_write(cfd, ret_pack);
+        }
+        sprintf(query, "INSERT INTO message(type, send_uid, recv_uid, gid, content, state) "
+                "VALUES(%d, %d, %s, %s, '%s', %d)", GROUP_CHAT, uid, row[0], output[1], output[2], state);
+    }
     mysql_free_result(result);
     free(arg);
 }
@@ -1094,7 +1183,31 @@ int get_cfd_account(const char *account)
         return atoi(row[12]);
     }
 }
-//判断用户是否在线
+//通过uid获取套接字
+int get_cfd_uid(const char *uid)
+{
+    char query[256];
+    MYSQL_RES *result;
+    sprintf(query, "SELECT * FROM user_info WHERE uid = %s", uid);
+    pthread_mutex_lock(&mysql_lock);
+    if (mysql_query(&mysql, query) < 0)
+            my_err("mysql_query error");
+    if ( (result = mysql_store_result(&mysql)) == NULL)
+            my_err("mysql_store_result error");
+    pthread_mutex_unlock(&mysql_lock);
+    if (mysql_num_rows(result) == 0)
+    {
+        mysql_free_result(result);
+        return -1;
+    }
+    else
+    {
+        MYSQL_ROW row = mysql_fetch_row(result);
+        mysql_free_result(result);
+        return atoi(row[12]);
+    }
+}
+//判断用户是否在线(通过账号)
 int is_user_online(const char *account)
 {
     char query[256];
@@ -1116,5 +1229,54 @@ int is_user_online(const char *account)
         MYSQL_ROW row = mysql_fetch_row(result);
         mysql_free_result(result);
         return atoi(row[11]) == ONLINE;
+    }
+}
+//判断用户是否在线(通过uid)
+int is_user_online_uid(const char *uid)
+{
+    char query[256];
+    MYSQL_RES *result;
+    sprintf(query, "SELECT * FROM user_info WHERE uid = %s", uid);
+    pthread_mutex_lock(&mysql_lock);
+    if (mysql_query(&mysql, query) < 0)
+            my_err("mysql_query error");
+    if ( (result = mysql_store_result(&mysql)) == NULL)
+            my_err("mysql_store_result error");
+    pthread_mutex_unlock(&mysql_lock);
+    if (mysql_num_rows(result) == 0)
+    {
+        mysql_free_result(result);
+        return -1;
+    }
+    else
+    {
+        MYSQL_ROW row = mysql_fetch_row(result);
+        mysql_free_result(result);
+        return atoi(row[11]) == ONLINE;
+    }
+}
+//通过gid获取群名
+int get_grpname_gid(const char *gid, char *group_name)
+{
+    char query[256];
+    MYSQL_RES *result;
+    sprintf(query, "SELECT group_name FROM group_info WHERE gid = %s", gid);
+    pthread_mutex_lock(&mysql_lock);
+    if (mysql_query(&mysql, query) < 0)
+            my_err("mysql_query error");
+    if ( (result = mysql_store_result(&mysql)) == NULL)
+            my_err("mysql_store_result error");
+    pthread_mutex_unlock(&mysql_lock);
+    if (mysql_num_rows(result) == 0)
+    {
+        mysql_free_result(result);
+        return -1;
+    }
+    else
+    {
+        MYSQL_ROW row = mysql_fetch_row(result);
+        strcpy(group_name, row[0]);
+        mysql_free_result(result);
+        return 0;
     }
 }

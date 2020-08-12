@@ -179,6 +179,12 @@ int get_nickname_account(const char *account, char *nickname);
 
 int get_cfd_account(const char *account);
 
+int get_cfd_uid(const char *uid);
+
 int is_user_online(const char *account);
+
+int is_user_online_uid(const char *uid);
+
+int get_grpname_gid(const char *gid, char *group_name);
 
 #endif
