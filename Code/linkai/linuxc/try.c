@@ -5,26 +5,15 @@
     > Mail: nigo@xiyoulinux.org
     > Created Time: 2020年06月08日 星期一 08时52分18秒
  ************************************************************************/
-
-
-
-
-#include<mysql/mysql.h>
 #include <stdio.h>
- 
+#include <string.h>
+#include <limits.h>
+#include <stdlib.h>
 
-int
-main(int
-argc,char**argv)
+#define ACCOUNT_MIN 1000000000
 
+int main()
 {
-
-        printf("MySQL client version: %s\n",mysql_get_client_info());
-
-        return
-0;
-
- 
-
+    printf("aa"
+           "bb");
 }
-

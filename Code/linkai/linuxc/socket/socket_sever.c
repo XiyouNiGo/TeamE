@@ -16,7 +16,7 @@
 #include <pthread.h>
 #include <ctype.h>
 
-#define SERV_PORT 9527
+#define SERV_PORT 8000
 
 void my_err(const char *str)
 {

@@ -1,32 +1,20 @@
-
-/*************************************************************************
-    > File Name: socket_client.c
-    > Author: NiGo
-    > Mail: nigo@xiyoulinux.org
-    > Created Time: 2020年06月09日 星期二 10时01分49秒
- ************************************************************************/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <string.h>
 #include <sys/types.h>
 #include <pthread.h>
-#include <cjson/cJSON.h>
-
-#define SERV_PORT 8000
-
-void my_err(const char *str)
-{
-     perror(str);
-     exit(1);
-}
+#include "../../inc/client/interface.h"
+#include "../../inc/client/list.h"
+#include "../../inc/client/md5.h"
+#include "../../inc/client/client_config.h"
 
 int main(int argc, char *argv[])
 {
     int connect_fd;
-    char buf[BUFSIZ];
+    struct packet write_buf;
 
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
@@ -37,7 +25,7 @@ int main(int argc, char *argv[])
     {
         my_err("socket error");
     }
-    //将套接字和客户端建立连接
+    //将套接字和服务器建立连接
     if (connect(connect_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1)
     {
         my_err("connect error");
@@ -45,11 +33,10 @@ int main(int argc, char *argv[])
 
     while (1)
     {
-        write(connect_fd, "hello\n", 6);
-        sleep(2);
-        int ret = read(connect_fd, buf, sizeof(buf));
-        //printf("ret = %d\n", ret);
-        write(STDOUT_FILENO, buf, ret);
+        bale_packet(&write_buf, 4, 1);
+        strcpy(write_buf.buf,"hhh");
+        my_write(connect_fd, write_buf);
+        sleep(3);
     }
 
     close(connect_fd);

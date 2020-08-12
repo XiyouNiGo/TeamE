@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
         my_err("mysql_library_init error");
     }
     //连接服务器(3306为mysql默认端口)
-    if (mysql_real_connect(&mysql, "localhost", "root", "root", "test", 3306, NULL, 0) == 0)
+    if (mysql_real_connect(&mysql, "localhost", "root", "root", "chatroom", 0, NULL, 0))
     {
         my_err("mysql_real_connect error");
     }
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
         my_err("mysql_set_character_set error");
     }
     //查询数据表
-    if (mysql_real_query(&mysql, "SELECT * FROM Human", strlen("SELECT * FROM Human")))
+    if (mysql_real_query(&mysql, "SELECT * FROM user_info", strlen("SELECT * FROM user_info")))
     {
         my_err("mysql_real_query error");
     }

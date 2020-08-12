@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
     {
         if ( (num_ready = epoll_wait(efd, ep, OPEN_MAX, -1)) == -1)  //-1:永久阻塞
             my_err("epoll_wait error");
-        for (i = 0; i < n; i++)
+        for (i = 0; i < num_ready; i++)
         {
             if ( !(ep[i].events & EPOLLIN) )    //若不是读事件(可省略)
                 continue;
