@@ -538,7 +538,7 @@ int main(int argc, char *argv[])
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(SERV_PORT);
-    inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr.s_addr);
+    inet_pton(AF_INET, "192.168.30.190", &server_addr.sin_addr.s_addr);
 
     if ( (connect_fd = socket(AF_INET, SOCK_STREAM, 0))  == -1)
     {

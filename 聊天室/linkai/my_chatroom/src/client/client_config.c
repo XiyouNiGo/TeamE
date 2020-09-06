@@ -37,11 +37,11 @@ void write_log(const char *log)
     if ( (fd_log = open("log/client.log", O_RDWR | O_CREAT | O_APPEND, 0644)) < 0)
         my_err("open error");
 
-    static char log_buf[BUFSIZE_LINE];
+    static char log_buf[256];
     get_timestamp(log_buf);
     sprintf(log_buf, "%s [%d] (%lu): %s\n", log_buf, (int)getpid(), (unsigned long)pthread_self(), log);
 
-    write(fd_log, log_buf, BUFSIZE_LINE);
+    write(fd_log, log_buf, 256);
 }
 //安全的读取信息
 int read_s(int connect_fd, char *read_buf, int count)
