@@ -34,15 +34,20 @@ void format_string(char *str, char *output[], int num)
 }
 
 int main () {
-   char str[80] = "hhh\036jjj\036jjj\036default\036ooo";
-   char *output[5];
-   int num;
+   char str[80] = {0};
+   strcat(str, "aaa");
+   strcat(str, "\036");
+   strcat(str, "aaa");
+   strcat(str, "\036");
+   printf("%lu\n", strlen(str));
    printf("%s\n", str);
+   /*char *output[5];
+   int num;
    parse_string(str, output, &num);
-   printf("%d\n", num);
+   printf("num = %d\n", num);
    for (int i = 0; i < num; i++)
        printf("%s\n", output[i]);
    char temp[80];
-   format_string(temp, output, num);
+   format_string(temp, output, num);*/
    return(0);
 }

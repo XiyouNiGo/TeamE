@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <pthread.h>
+#include <errno.h>
 #include <string.h>
 #include <ctype.h>
 #include <sys/epoll.h>
@@ -18,6 +19,103 @@ void my_err(const char *str)
      exit(1);
 }
 
+#define BUFSIZE_FLAG 4
+
+#define BUFSIZE_LEN 4
+
+struct packet
+{
+    int len;
+    int flag;
+    char buf[1024];
+};
+
+int read_s(int connect_fd, char *read_buf, int count)
+{
+    int left_count = count;
+    int ret;
+    while (left_count > 0)
+    {
+        if ( (ret = read(connect_fd, read_buf, left_count)) < 0)
+        {
+            //若信号中断，继续读操作
+            if (errno == EINTR)
+                continue;
+            else
+            {
+                my_err("read_s error");
+                return -1;
+            }
+        }
+        //对端关闭
+        else if (ret == 0)
+            return count - left_count;  //返回实际读取的字节数
+        //成功读取
+        else
+        {
+            read_buf += ret;
+            left_count -= ret;
+        }
+    }
+    return count;
+}
+//安全的写信息
+int write_s(int connect_fd, char *write_buf, int count)
+{
+    int left_count = count;
+    int ret;
+    while (left_count > 0)
+    {
+        if ( (ret = write(connect_fd, write_buf, left_count)) < 0)
+        {
+            if (errno == EINTR)
+                continue;
+            else
+            {
+                my_err("write_s error");
+                return -1;
+            }
+        }
+        //返回0，且无errno代表没有错误发生
+        else if (ret == 0)
+            continue;
+        //成功写入
+        else
+        {
+            write_buf += ret;
+            left_count -= ret;
+        }
+    }
+    return count;
+}
+//打包packet数据包
+void bale_packet(struct packet *packet, int len, int flag)
+{
+    packet->len = len;
+    packet->flag = flag;
+}
+//读取struct packet类型的自定义读函数
+int my_read(int connect_fd, struct packet *read_buf)
+{
+    int n;
+
+    if ( (n = read_s(connect_fd, (char*)(&read_buf->len), 4)) != 4)
+        return n;
+
+    if ( (n = read_s(connect_fd, (char*)(&read_buf->flag), 4)) != 4)
+        return n;
+    if ( (n = read_s(connect_fd, (char*)read_buf->buf, read_buf->len)) != read_buf->len)
+        return n;
+    /*if ( (n = read_s(connect_fd, (char*)read_buf, read_buf->len + BUFSIZE_LEN + BUFSIZE_FLAG)) != read_buf->len)
+        return n;*/
+    return n + BUFSIZE_FLAG + BUFSIZE_LEN;
+}
+//写入struct packet类型的自定义写函数
+int my_write(int connect_fd, struct packet write_buf)
+{
+    return write_s(connect_fd, (char*)&write_buf, BUFSIZE_FLAG + BUFSIZE_LEN + write_buf.len);
+}
+
 int main(int argc, char *argv[])
 {
     int i, j, listen_fd, connect_fd, sock_fd;
@@ -29,6 +127,7 @@ int main(int argc, char *argv[])
     struct epoll_event temp;        //epoll_ctl()
     struct epoll_event ep[OPEN_MAX];//epoll_wait()
     char buf[MAXLINE];
+    struct packet send_pack;
 
     if ( (listen_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         my_err("socket error");
@@ -74,7 +173,7 @@ int main(int argc, char *argv[])
             {
                 sock_fd = ep[i].data.fd;
                 //读到0说明客户端关闭
-                if ( (n = read(sock_fd, buf, MAXLINE)) == 0)
+                if ( (n = my_read(sock_fd, &send_pack)) == 0)
                 {
                     if ( (ret = epoll_ctl(efd, EPOLL_CTL_DEL, sock_fd, NULL)) < 0)
                         my_err("epoll_ctl error");
@@ -92,10 +191,10 @@ int main(int argc, char *argv[])
                 }
                 else
                 {
-                    for (j = 0; j < n; j++)
-                        buf[j] = toupper(buf[i]);
-                    write(STDOUT_FILENO, buf, n);
-                    write(sock_fd, buf, n);
+                    printf("len:%d\n", send_pack.len);
+                    printf("flag:%d\n", send_pack.flag);
+                    printf("buf:%s\n", send_pack.buf);
+                    //printf("%s\n", buf);
                 }
             }
          }

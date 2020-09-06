@@ -12,10 +12,23 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <string.h>
+#include <errno.h>
 #include <pthread.h>
 #include <cjson/cJSON.h>
 
 #define SERV_PORT 8000
+
+#define BUFSIZE_FLAG 4
+
+#define BUFSIZE_LEN 4
+
+struct packet
+{
+    int len;
+    int flag;
+    char buf[1024];
+};
 
 void my_err(const char *str)
 {
@@ -23,10 +36,89 @@ void my_err(const char *str)
      exit(1);
 }
 
+int read_s(int connect_fd, char *read_buf, int count)
+{
+    int left_count = count;
+    int ret;
+    while (left_count > 0)
+    {
+        if ( (ret = read(connect_fd, read_buf, left_count)) < 0)
+        {
+            //若信号中断，继续读操作
+            if (errno == EINTR)
+                continue;
+            else
+            {
+                my_err("read_s error");
+                return -1;
+            }
+        }
+        //对端关闭
+        else if (ret == 0)
+            return count - left_count;  //返回实际读取的字节数
+        //成功读取
+        else
+        {
+            read_buf += ret;
+            left_count -= ret;
+        }
+    }
+    return count;
+}
+//安全的写信息
+int write_s(int connect_fd, char *write_buf, int count)
+{
+    int left_count = count;
+    int ret;
+    while (left_count > 0)
+    {
+        if ( (ret = write(connect_fd, write_buf, left_count)) < 0)
+        {
+            if (errno == EINTR)
+                continue;
+            else
+            {
+                my_err("write_s error");
+                return -1;
+            }
+        }
+        //返回0，且无errno代表没有错误发生
+        else if (ret == 0)
+            continue;
+        //成功写入
+        else
+        {
+            write_buf += ret;
+            left_count -= ret;
+        }
+    }
+    return count;
+}
+//打包packet数据包
+void bale_packet(struct packet *packet, int len, int flag)
+{
+    packet->len = len;
+    packet->flag = flag;
+}
+//读取struct packet类型的自定义读函数
+int my_read(int connect_fd, struct packet *read_buf)
+{
+    int n;
+    if ( (n = read_s(connect_fd, (char*)read_buf, read_buf->len + BUFSIZE_LEN + BUFSIZE_FLAG)) != read_buf->len)
+        return n;
+    return n + BUFSIZE_FLAG + BUFSIZE_LEN;
+}
+//写入struct packet类型的自定义写函数
+int my_write(int connect_fd, struct packet write_buf)
+{
+    return write_s(connect_fd, (char*)&write_buf, BUFSIZE_FLAG + BUFSIZE_LEN + write_buf.len);
+}
+
 int main(int argc, char *argv[])
 {
     int connect_fd;
-    char buf[BUFSIZ];
+    char buf[BUFSIZ] = "hhhh";
+    struct packet send_pack;
 
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
@@ -43,14 +135,15 @@ int main(int argc, char *argv[])
         my_err("connect error");
     }
 
-    while (1)
-    {
-        write(connect_fd, "hello\n", 6);
-        sleep(2);
-        int ret = read(connect_fd, buf, sizeof(buf));
-        //printf("ret = %d\n", ret);
-        write(STDOUT_FILENO, buf, ret);
-    }
+    strcpy(send_pack.buf, "jjjj");
+
+    bale_packet(&send_pack, 4, 1);
+    printf("len:%d\n", send_pack.len);
+    printf("flag:%d\n", send_pack.flag);
+    printf("buf:%s\n", send_pack.buf);
+    my_write(connect_fd, send_pack);
+    
+    //write_s(connect_fd, buf, 4);
 
     close(connect_fd);
 
