@@ -743,7 +743,7 @@ void *private_chat(void *arg, int connect_fd)
         {
             flag = REFUSE;
         }
-        mysql_free_result(result);
+        //mysql_free_result(result);
     }
     
     bale_packet(&ret_pack, 0, flag * PRIVATE_CHAT);
