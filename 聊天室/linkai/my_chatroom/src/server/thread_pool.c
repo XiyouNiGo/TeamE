@@ -56,8 +56,8 @@ void *worker_thread(void *thread_pool)
     thread_pool_task_t task;
     pthread_mutex_lock(&mysql_connect_lock);
     mysql_init(&mysql);
-    //if (mysql_real_connect(&mysql, "47.94.14.45", "Linux_8306", "18150268306", "chat_room_8306", 0, NULL, 0) == NULL)
-    if (mysql_real_connect(&mysql, "127.0.0.1", "root", "root", "chatroom", 0, NULL, 0) == NULL)
+    if (mysql_real_connect(&mysql, "47.94.14.45", "Linux_8306", "18150268306", "chat_room_8306", 0, NULL, 0) == NULL)
+    //if (mysql_real_connect(&mysql, "127.0.0.1", "root", "root", "chatroom", 0, NULL, 0) == NULL)
     {
         my_err("mysql_real_connect error");
     }
@@ -727,6 +727,7 @@ void *private_chat(void *arg, int connect_fd)
                     char nickname[64];
                     get_nickname_uid(output[0], nickname);
                     //uid、昵称和内容
+                    printf("!!!:\n%s %s %s %s\n", output[0], nickname, output[2], output[3]);
                     sprintf(ret_pack.buf, "%s\036%s\036%s\036%s\036", output[0], nickname, output[2], output[3]);
                     bale_packet(&ret_pack, strlen(ret_pack.buf), PRIVATE_CHAT);
                     my_write(get_cfd_uid(output[1]), ret_pack);

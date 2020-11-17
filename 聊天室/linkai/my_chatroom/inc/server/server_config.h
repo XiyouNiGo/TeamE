@@ -19,7 +19,7 @@
 #define BUFSIZE_LEN 4
 #define BUFSIZE_PACK sizeof(struct packet)
 
-#define SERV_PORT 8016
+#define SERV_PORT 8306
 #define EPOLL_MAX 5000
 #define LISTEN_MAX 20
 

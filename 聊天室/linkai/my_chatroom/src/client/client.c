@@ -538,18 +538,22 @@ int main(int argc, char *argv[])
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(SERV_PORT);
-    inet_pton(AF_INET, "192.168.30.190", &server_addr.sin_addr.s_addr);
+    if (inet_pton(AF_INET, "47.94.14.45", &server_addr.sin_addr.s_addr) != 1)
+        my_err("inet_pton error");
+    //inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr.s_addr);
 
     if ( (connect_fd = socket(AF_INET, SOCK_STREAM, 0))  == -1)
     {
         my_err("socket error");
     }
     CLOSE();
+    printf("连接中......\n");
     //将套接字和服务器建立连接
     if (connect(connect_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1)
     {
         my_err("服务器还没开呢......\n");
     }
+    printf("连接成功！\n");
     //初始化消息队列
     Q = (SqQueue*)malloc(sizeof(SqQueue));
     InitQueue(Q);

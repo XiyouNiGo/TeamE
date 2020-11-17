@@ -9,6 +9,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <sys/epoll.h>
+#include <errno.h>
 #include <mysql/mysql.h>
 #include <cjson/cJSON.h>
 #include "../../inc/server/server_config.h"
@@ -44,8 +45,8 @@ int main(int argc, char **argv)
         my_err("mysql_library_init error");
     }
     //连接服务器
-    //if (mysql_real_connect(&mysql, "47.94.14.45", "Linux_8306", "18150268306", "chat_room_8306", 0, NULL, 0) == NULL)
-    if (mysql_real_connect(&mysql, "127.0.0.1", "root", "root", "chatroom", 0, NULL, 0) == NULL)
+    if (mysql_real_connect(&mysql, "47.94.14.45", "Linux_8306", "18150268306", "chat_room_8306", 0, NULL, 0) == NULL)
+    //if (mysql_real_connect(&mysql, "127.0.0.1", "root", "root", "chatroom", 0, NULL, 0) == NULL)
     {
         my_err("mysql_real_connect error");
     }
@@ -82,8 +83,12 @@ int main(int argc, char **argv)
         my_err("epoll_ctl error");
     while (1)
     {
+        //使用gdb调试时,可能收到SIGTRAP信号，对于会阻塞的函数，可能出现问题从而返回非0值
         if ( (num_ready = epoll_wait(efd, ep, EPOLL_MAX, -1)) == -1)  //-1:永久阻塞
-            my_err("epoll_wait error");
+        {
+            if (errno == EINTR)
+                my_err("epoll_wait error");
+        }
         for (i = 0; i < num_ready; i++)
         {
             if (ep[i].data.fd == listen_fd)

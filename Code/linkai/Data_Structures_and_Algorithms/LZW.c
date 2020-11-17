@@ -95,9 +95,8 @@ void lzw_encode(char *text, Dictionary *dict)
 {
     char current[1000];
     char next;
-    int code;
     int i = 0;
-    while (i < strlen(text) - 2)
+    while (i < strlen(text))
     {
         //先把第i个字符存入(对于后续循环，该处也有一个清空current的作用)
         sprintf(current, "%c", text[i]);
@@ -113,12 +112,13 @@ void lzw_encode(char *text, Dictionary *dict)
             i++;
             next = text[i+1];
         }
-        insert_sequence(dict, current);
-        char copy[1000];
-        //编码并存入数组key(去掉最后的字母,因为是字典里的)
-        strcpy(copy, current);
-        copy[strlen(current) - 1] = '\0';
-        insert_key(get_code(dict, copy));
+        //编码并存入数组key
+        //
+        //无效sequence无需插入
+        if (i < strlen(text))
+            insert_sequence(dict, current);
+        current[strlen(current) - 1] = '\0';
+        insert_key(get_code(dict, current));
     }
 }
 //解压编码
@@ -145,9 +145,10 @@ void lzw_decode(Dictionary *dict)
 int main(int argc, char *argv[])
 {
     Dictionary dict;
-    char *text = "TOBEORNOTTOBEORTOBEORNOT";
+    char text[] = "TOTOB";
+    //char text[] = "TOBEORNOTTOBEORTOBEORNOT";
     init_dictionary(&dict, 100);
-    lzw_encode((char*)text, &dict);
+    lzw_encode(text, &dict);
     print_dictionary(&dict);
     printf("Text : \n%s\n", text);
     printf("Code : \n");
