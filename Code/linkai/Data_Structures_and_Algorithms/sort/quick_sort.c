@@ -23,9 +23,10 @@ void swap(int arr[], int low, int high)
 
 void quick_sort(int arr[], int left, int right)
 {
-    if (left > right)
+    /* if (left > right || left < 0) */
+    if (left >= right)
         return;
-    int i = left;
+    int i = left + 1;
     int j = right;
     int basic = arr[left];  //基准值
     
@@ -51,23 +52,24 @@ void quick_sort(int arr[], int left, int right)
 }
 int main(int argc, char *argv[])
 {
-    int arr[8];
+    int arr[5];
 
-    printf("Enter random 8 numer:\n");
-    for (int i = 0; i < 8; i++)
+    /* 5 2 8 5 3 */
+    printf("Enter random 5 numer:\n");
+    for (int i = 0; i < 5; i++)
     {
         scanf("%d", &arr[i]);
     }
 
     printf("Before:");
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 5; i++)
         printf(" %d", arr[i]);
     putchar('\n');
 
-    quick_sort(arr, 0, 7);
+    quick_sort(arr, 0, 4);
 
     printf("After:");
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 5; i++)
         printf(" %d", arr[i]);
     putchar('\n');
 
